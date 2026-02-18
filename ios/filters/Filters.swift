@@ -123,10 +123,10 @@ func applyMaskedVariableBlur(to image: CIImage, config: MaskedVariableBlurConfig
     }
 
 func applyGradientOverlay(to image: CIImage, config: GradientOverlayConfig) -> CIImage {
-        
-        
+
+
     guard config.color0Alpha > 0 || config.color1Alpha > 0 else { return image }
-    
+
         let gradient = CIFilter.smoothLinearGradient()
         gradient.color0 = CIColor(
             red: config.color0Red,
@@ -140,11 +140,11 @@ func applyGradientOverlay(to image: CIImage, config: GradientOverlayConfig) -> C
             blue: config.color1Blue,
             alpha: config.color1Alpha
         )
-        
-        
+
+
         let imageHeight = image.extent.height
         let imageWidth = image.extent.width
-        
+
         gradient.point0 = CGPoint(
             x: config.point0X * imageWidth,
             y: config.point0Y * imageHeight
@@ -153,10 +153,10 @@ func applyGradientOverlay(to image: CIImage, config: GradientOverlayConfig) -> C
             x: config.point1X * imageWidth,
             y: config.point1Y * imageHeight
         )
-        
+
         guard let gradientImage = gradient.outputImage else { return image }
-        
-        
+
+
         let blendFilter: CIFilter
         switch config.blendMode {
         case "multiply":
@@ -172,9 +172,54 @@ func applyGradientOverlay(to image: CIImage, config: GradientOverlayConfig) -> C
         default:
             blendFilter = CIFilter.sourceAtopCompositing()
         }
-        
+
         blendFilter.setValue(image, forKey: kCIInputBackgroundImageKey)
         blendFilter.setValue(gradientImage, forKey: kCIInputImageKey)
-        
+
         return blendFilter.outputImage ?? image
     }
+
+func applyOutline(to image: CIImage, config: OutlineConfig) -> CIImage {
+    guard config.width > 0 else { return image }
+    
+    let context = CIContext(options: nil)
+    let expandedExtent = image.extent
+
+    // Extract the alpha channel
+    guard let alphaMaskFilter = CIFilter(name: "CIColorMatrix") else { return image }
+    alphaMaskFilter.setValue(image, forKey: kCIInputImageKey)
+    alphaMaskFilter.setValue(CIVector(x: 0, y: 0, z: 0, w: 1), forKey: "inputRVector")
+    alphaMaskFilter.setValue(CIVector(x: 0, y: 0, z: 0, w: 1), forKey: "inputGVector")
+    alphaMaskFilter.setValue(CIVector(x: 0, y: 0, z: 0, w: 1), forKey: "inputBVector")
+    alphaMaskFilter.setValue(CIVector(x: 0, y: 0, z: 0, w: 1), forKey: "inputAVector")
+
+    guard let alphaImage = alphaMaskFilter.outputImage else { return image }
+
+    // Create outline with morphology
+    guard let edgeFilter = CIFilter(name: "CIMorphologyGradient") else { return image }
+    edgeFilter.setValue(alphaImage, forKey: kCIInputImageKey)
+    edgeFilter.setValue(config.width, forKey: "inputRadius")
+    guard let edgeMaskImage = edgeFilter.outputImage else { return image }
+
+    // Generate colored outline
+    guard let colorFilter = CIFilter(name: "CIConstantColorGenerator") else { return image }
+    colorFilter.setValue(
+        CIColor(
+            red: config.colorRed,
+            green: config.colorGreen,
+            blue: config.colorBlue,
+            alpha: config.colorAlpha
+        ),
+        forKey: kCIInputColorKey
+    )
+    guard let colorImage = colorFilter.outputImage?.cropped(to: expandedExtent) else { return image }
+
+    // Mask color with the outline
+    guard let blendFilter = CIFilter(name: "CIBlendWithMask") else { return image }
+    blendFilter.setValue(colorImage, forKey: kCIInputImageKey)
+    blendFilter.setValue(image, forKey: kCIInputBackgroundImageKey)
+    blendFilter.setValue(edgeMaskImage, forKey: kCIInputMaskImageKey)
+    guard let outputImage = blendFilter.outputImage else { return image }
+    
+    return outputImage
+}

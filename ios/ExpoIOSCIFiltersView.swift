@@ -47,7 +47,7 @@ struct ExpoCIFilterView: ExpoSwiftUI.View, ExpoSwiftUI.WithHostingView {
 
     
     func applyFilters(to image: UIImage) -> UIImage? {
-           
+
         guard !props.motionBlur.isEmpty ||
               !props.gaussianBlur.isEmpty ||
               !props.colorControls.isEmpty ||
@@ -58,7 +58,8 @@ struct ExpoCIFilterView: ExpoSwiftUI.View, ExpoSwiftUI.WithHostingView {
               !props.sharpen.isEmpty ||
               !props.vignette.isEmpty ||
               !props.maskedVariableBlur.isEmpty ||
-              !props.gradientOverlay.isEmpty else {
+              !props.gradientOverlay.isEmpty ||
+              !props.outline.isEmpty else {
             return nil
         }
            
@@ -104,7 +105,10 @@ struct ExpoCIFilterView: ExpoSwiftUI.View, ExpoSwiftUI.WithHostingView {
           if !props.gradientOverlay.isEmpty {
               currentImage = applyGradientOverlay(to: currentImage, config: configs.gradientOverlay)
           }
-           
+          if !props.outline.isEmpty {
+              currentImage = applyOutline(to: currentImage, config: configs.outline)
+          }
+
            currentImage = currentImage.cropped(to: originalExtent)
 
            

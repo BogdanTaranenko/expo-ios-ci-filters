@@ -29,6 +29,7 @@ export default function CIFilterDemo(): React.JSX.Element {
   const [secondaryControl, setSecondaryControl] = useState(false);
   const [currentValue, setCurrentValue] = useState<number>(0);
   const [blendMode, setBlendMode] = useState<BlendMode>(BlendMode.SoftLight);
+  const [selectedOutlineColor, setSelectedOutlineColor] = useState<string>("Red");
   const [imageUri, setImageUri] = useState<string>(DEFAULT_IMAGE_URL);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -417,27 +418,47 @@ export default function CIFilterDemo(): React.JSX.Element {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.presetsContainer}
               >
-                {activeFilter.presets.map((preset: any) => (
-                  <TouchableOpacity
-                    key={preset.name}
-                    style={[
-                      styles.presetButton,
-                      blendMode === preset.blendMode &&
-                        styles.presetButtonActive,
-                    ]}
-                    onPress={() => setBlendMode(preset.blendMode)}
-                  >
-                    <Text
+                {activeFilter.presets.map((preset: any) => {
+                  const isActive = preset.blendMode
+                    ? blendMode === preset.blendMode
+                    : selectedOutlineColor === preset.name;
+
+                  return (
+                    <TouchableOpacity
+                      key={preset.name}
                       style={[
-                        styles.presetText,
-                        blendMode === preset.blendMode &&
-                          styles.presetTextActive,
+                        styles.presetButton,
+                        isActive && styles.presetButtonActive,
                       ]}
+                      onPress={() => {
+                        if (preset.blendMode) {
+                          setBlendMode(preset.blendMode);
+                        } else {
+                          // Handle outline color preset
+                          setSelectedOutlineColor(preset.name);
+                          setFilters((prev) => ({
+                            ...prev,
+                            outline: {
+                              ...prev.outline,
+                              colorRed: preset.colorRed ?? prev.outline.colorRed ?? 0,
+                              colorGreen: preset.colorGreen ?? prev.outline.colorGreen ?? 0,
+                              colorBlue: preset.colorBlue ?? prev.outline.colorBlue ?? 0,
+                            },
+                          }));
+                        }
+                      }}
                     >
-                      {preset.name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                      <Text
+                        style={[
+                          styles.presetText,
+                          isActive && styles.presetTextActive,
+                        ]}
+                      >
+                        {preset.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </ScrollView>
             )}
           </Animated.View>

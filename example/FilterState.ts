@@ -10,6 +10,7 @@ import type {
   VignetteConfig,
   MaskedVariableBlurConfig,
   GradientOverlayConfig,
+  OutlineConfig,
 } from "expo-ios-ci-filters";
 
 export interface FilterState {
@@ -24,4 +25,5 @@ export interface FilterState {
   vignette: VignetteConfig;
   maskedVariableBlur: MaskedVariableBlurConfig;
   gradientOverlay: GradientOverlayConfig;
+  outline: OutlineConfig;
 }

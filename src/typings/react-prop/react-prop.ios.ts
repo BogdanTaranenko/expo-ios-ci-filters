@@ -70,6 +70,14 @@ export interface GradientOverlayConfig {
   blendMode?: BlendMode;
 }
 
+export interface OutlineConfig {
+  width?: number;
+  colorRed?: number;
+  colorGreen?: number;
+  colorBlue?: number;
+  colorAlpha?: number;
+}
+
 export interface IReactPropIOS {
   url: string;
   borderRadius?: number;
@@ -84,4 +92,5 @@ export interface IReactPropIOS {
   vignette?: VignetteConfig;
   maskedVariableBlur?: MaskedVariableBlurConfig;
   gradientOverlay?: GradientOverlayConfig;
+  outline?: OutlineConfig;
 }
