@@ -72,6 +72,7 @@ export interface GradientOverlayConfig {
 
 export interface OutlineConfig {
   width?: number;
+  color?: string;
   colorRed?: number;
   colorGreen?: number;
   colorBlue?: number;
@@ -84,6 +85,7 @@ export interface ShineConfig {
   spread?: number;
   intensity?: number;
   angle?: Radian;
+  color?: string;
   colorRed?: number;
   colorGreen?: number;
   colorBlue?: number;

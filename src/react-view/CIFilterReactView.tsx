@@ -7,6 +7,8 @@ import type { NativeViewStyleInterface } from "../typings/view/ViewStyle.ios";
 import { type ViewStyle } from "react-native";
 
 import { getBorderStyleModifier } from "../config/getBorderStyleModifier";
+import { parseHexColor } from "../config/parseHexColor";
+import type { OutlineConfig, ShineConfig } from "../typings/react-prop/react-prop.ios";
 
 type InternalProps = IReactPropIOS &
   BaseStylingKeyInterface &
@@ -15,6 +17,17 @@ type InternalProps = IReactPropIOS &
 export type PublicProps = Omit<InternalProps, "borderRadius"> & {
   style?: ViewStyle;
 };
+
+function resolveHexColor<T extends OutlineConfig | ShineConfig>(
+  config: T | undefined
+): Omit<T, "color"> | undefined {
+  if (!config) return undefined;
+  const { color, ...rest } = config;
+  if (!color) return rest as Omit<T, "color">;
+  const parsed = parseHexColor(color);
+  if (!parsed) return rest as Omit<T, "color">;
+  return { ...parsed, ...rest } as Omit<T, "color">;
+}
 
 export const CIFilterImage: React.FC<PublicProps> &
   React.FunctionComponent<PublicProps> = React.memo(
@@ -32,6 +45,8 @@ export const CIFilterImage: React.FC<PublicProps> &
     const memoizedProps = React.useMemo(
       () => ({
         ...rest,
+        outline: resolveHexColor(rest.outline),
+        shine: resolveHexColor(rest.shine),
         borderRadius,
         style: {
           overflow: "hidden",
