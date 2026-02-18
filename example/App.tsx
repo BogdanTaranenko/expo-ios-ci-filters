@@ -599,13 +599,6 @@ export default function CIFilterDemo(): React.JSX.Element {
           </ScrollView>
         </View>
       </View>
-      <CIFilterImage
-        url="https://images.pexels.com/photos/1042423/pexels-photo-1042423.jpeg"
-        motionBlur={{
-          angle: 0,
-          radius: 20,
-        }}
-      />
     </View>
   );
 }
