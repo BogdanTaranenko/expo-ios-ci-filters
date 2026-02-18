@@ -1,4 +1,4 @@
-import { BlendMode } from "../../enums/";
+import { BlendMode, ContentFit } from "../../enums/";
 
 export type NormalizedCoord = number;
 export type Radian = number;
@@ -92,6 +92,7 @@ export interface ShineConfig {
 
 export interface IReactPropIOS {
   url: string;
+  contentFit?: ContentFit;
   borderRadius?: number;
   motionBlur?: MotionBlurConfig;
   colorControls?: ColorControlsConfig;

@@ -10,6 +10,7 @@ import SwiftUI
 
 class ExpoCIFilterProps: ExpoSwiftUI.ViewProps {
     @Field var url: String = ""
+     @Field var contentFit: String = "cover"
      @Field var borderRadius: Double = 0
      @Field var motionBlur: [String: Double] = [:]
      @Field var colorControls: [String: Double] = [:]

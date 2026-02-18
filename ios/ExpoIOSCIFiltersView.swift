@@ -13,19 +13,30 @@ struct ExpoCIFilterView: ExpoSwiftUI.View, ExpoSwiftUI.WithHostingView {
     private let ciContext = CIContext()
 
 
+    private var contentMode: ContentMode {
+        switch props.contentFit {
+        case "contain":
+            return .fit
+        case "fill", "scaleDown":
+            return .fill
+        default:
+            return .fill
+        }
+    }
+
     var body: some View {
            Group {
                if let img = loadedImage {
                    if let filtered = applyFilters(to: img) {
                        Image(uiImage: filtered)
                            .resizable()
-                           .scaledToFill()
+                           .aspectRatio(contentMode: contentMode)
                            .clipped()
                            .cornerRadius(props.borderRadius)
                    } else {
                        Image(uiImage: img)
                            .resizable()
-                           .scaledToFill()
+                           .aspectRatio(contentMode: contentMode)
                            .clipped()
                            .cornerRadius(props.borderRadius)
                    }
