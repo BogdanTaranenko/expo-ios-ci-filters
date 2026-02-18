@@ -85,6 +85,7 @@ export interface ShineConfig {
   spread?: number;
   intensity?: number;
   angle?: Radian;
+  edgesOnly?: boolean;
   color?: string;
   colorRed?: number;
   colorGreen?: number;

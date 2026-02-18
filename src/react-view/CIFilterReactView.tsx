@@ -18,15 +18,30 @@ export type PublicProps = Omit<InternalProps, "borderRadius"> & {
   style?: ViewStyle;
 };
 
-function resolveHexColor<T extends OutlineConfig | ShineConfig>(
+function resolveFilterConfig<T extends OutlineConfig | ShineConfig>(
   config: T | undefined
-): Omit<T, "color"> | undefined {
+): Omit<T, "color" | "edgesOnly"> & { edgesOnly?: number } | undefined {
   if (!config) return undefined;
   const { color, ...rest } = config;
-  if (!color) return rest as Omit<T, "color">;
-  const parsed = parseHexColor(color);
-  if (!parsed) return rest as Omit<T, "color">;
-  return { ...parsed, ...rest } as Omit<T, "color">;
+  const resolved = { ...rest } as any;
+
+  // Convert hex color to RGBA channels
+  if (color) {
+    const parsed = parseHexColor(color);
+    if (parsed) {
+      if (resolved.colorRed === undefined) resolved.colorRed = parsed.colorRed;
+      if (resolved.colorGreen === undefined) resolved.colorGreen = parsed.colorGreen;
+      if (resolved.colorBlue === undefined) resolved.colorBlue = parsed.colorBlue;
+      if (resolved.colorAlpha === undefined) resolved.colorAlpha = parsed.colorAlpha;
+    }
+  }
+
+  // Convert boolean edgesOnly to number for [String: Double] dict
+  if ("edgesOnly" in resolved && typeof resolved.edgesOnly === "boolean") {
+    resolved.edgesOnly = resolved.edgesOnly ? 1.0 : 0.0;
+  }
+
+  return resolved;
 }
 
 export const CIFilterImage: React.FC<PublicProps> &
@@ -45,8 +60,8 @@ export const CIFilterImage: React.FC<PublicProps> &
     const memoizedProps = React.useMemo(
       () => ({
         ...rest,
-        outline: resolveHexColor(rest.outline),
-        shine: resolveHexColor(rest.shine),
+        outline: resolveFilterConfig(rest.outline),
+        shine: resolveFilterConfig(rest.shine),
         borderRadius,
         style: {
           overflow: "hidden",
