@@ -1,6 +1,6 @@
 {
-  "name": "expo-ios-ci-filters",
-  "version": "0.1.2",
+  "name": "@b.taranenko/expo-ios-ci-filters",
+  "version": "0.0.1",
   "description": "📸 iOS Core Image filters for Expo + React Native ✨",
   "main": "build/index.js",
   "types": "build/index.d.ts",
@@ -21,13 +21,13 @@
     "expo-ios-ci-filters",
     "ExpoIOSCIFilters"
   ],
-  "repository": "https://github.com/rit3zh/expo-ios-ci-filters",
+  "repository": "https://github.com/BogdanTaranenko/expo-ios-ci-filters",
   "bugs": {
-    "url": "https://github.com/rit3zh/expo-ios-ci-filters/issues"
+    "url": "https://github.com/BogdanTaranenko/expo-ios-ci-filters/issues"
   },
-  "author": "Ritesh. <119659853+rit3zh@users.noreply.github.com> (https://github.com/rit3zh)",
+  "author": "Bogdan Taranenko",
   "license": "MIT",
-  "homepage": "https://github.com/rit3zh/expo-ios-ci-filters#readme",
+  "homepage": "https://github.com/BogdanTaranenko/expo-image-crop-tool#readme",
   "dependencies": {},
   "devDependencies": {
     "@types/react": "~19.0.0",
