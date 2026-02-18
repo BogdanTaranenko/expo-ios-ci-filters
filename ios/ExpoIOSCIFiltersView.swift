@@ -2,14 +2,17 @@ import ExpoModulesCore
 import SwiftUI
 import CoreImage
 import CoreImage.CIFilterBuiltins
+import Combine
 
 struct ExpoCIFilterView: ExpoSwiftUI.View, ExpoSwiftUI.WithHostingView {
     let props: ExpoCIFilterProps
     @State private var loadedImage: UIImage?
-    
+    @State private var shineProgress: Double = 0.0
+    @State private var timerCancellable: AnyCancellable?
+
     private let ciContext = CIContext()
 
-    
+
     var body: some View {
            Group {
                if let img = loadedImage {
@@ -33,19 +36,51 @@ struct ExpoCIFilterView: ExpoSwiftUI.View, ExpoSwiftUI.WithHostingView {
                        .onAppear(perform: loadImage)
                }
            }
+           .onAppear { startShineTimerIfNeeded() }
+           .onDisappear { stopShineTimer() }
+           .onChange(of: props.shine) { newValue in
+               if newValue.isEmpty {
+                   stopShineTimer()
+                   shineProgress = 0.0
+               } else {
+                   startShineTimerIfNeeded()
+               }
+           }
        }
-    
-    
-    
+
+
+
     private func loadImage() {
         guard let url = URL(string: props.url) else { return }
         ImagePreloader.shared.preload(url: url) { img in
             loadedImage = img
         }
     }
-    
 
-    
+    private func startShineTimerIfNeeded() {
+        guard !props.shine.isEmpty else { return }
+        guard timerCancellable == nil else { return }
+
+        let config = ShineConfig(dict: props.shine)
+        guard config.speed > 0 else { return }
+
+        timerCancellable = Timer.publish(every: 1.0 / 60.0, on: .main, in: .common)
+            .autoconnect()
+            .sink { _ in
+                let increment = (1.0 / 60.0) / config.speed
+                shineProgress += increment
+                if shineProgress >= 1.0 {
+                    shineProgress -= 1.0
+                }
+            }
+    }
+
+    private func stopShineTimer() {
+        timerCancellable?.cancel()
+        timerCancellable = nil
+    }
+
+
     func applyFilters(to image: UIImage) -> UIImage? {
 
         guard !props.motionBlur.isEmpty ||
@@ -59,17 +94,18 @@ struct ExpoCIFilterView: ExpoSwiftUI.View, ExpoSwiftUI.WithHostingView {
               !props.vignette.isEmpty ||
               !props.maskedVariableBlur.isEmpty ||
               !props.gradientOverlay.isEmpty ||
-              !props.outline.isEmpty else {
+              !props.outline.isEmpty ||
+              !props.shine.isEmpty else {
             return nil
         }
-           
+
            guard let ciImage = CIImage(image: image) else { return nil }
-           
-           
+
+
            let originalExtent = ciImage.extent
            var currentImage = ciImage
-           
-           
+
+
            let configs = FilterConfigurations(from: props)
 
         if !props.motionBlur.isEmpty {
@@ -108,10 +144,13 @@ struct ExpoCIFilterView: ExpoSwiftUI.View, ExpoSwiftUI.WithHostingView {
           if !props.outline.isEmpty {
               currentImage = applyOutline(to: currentImage, config: configs.outline)
           }
+          if !props.shine.isEmpty {
+              currentImage = applyShine(to: currentImage, config: configs.shine, progress: shineProgress)
+          }
 
            currentImage = currentImage.cropped(to: originalExtent)
 
-           
+
            guard let cgImage = SharedCIContext.context.createCGImage(currentImage, from: originalExtent) else {
                return nil
            }

@@ -11,6 +11,7 @@ import type {
   MaskedVariableBlurConfig,
   GradientOverlayConfig,
   OutlineConfig,
+  ShineConfig,
 } from "expo-ios-ci-filters";
 
 export interface FilterState {
@@ -26,4 +27,5 @@ export interface FilterState {
   maskedVariableBlur: MaskedVariableBlurConfig;
   gradientOverlay: GradientOverlayConfig;
   outline: OutlineConfig;
+  shine: ShineConfig;
 }

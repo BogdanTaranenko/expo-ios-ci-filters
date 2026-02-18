@@ -30,6 +30,7 @@ export default function CIFilterDemo(): React.JSX.Element {
   const [currentValue, setCurrentValue] = useState<number>(0);
   const [blendMode, setBlendMode] = useState<BlendMode>(BlendMode.SoftLight);
   const [selectedOutlineColor, setSelectedOutlineColor] = useState<string>("Red");
+  const [selectedShineColor, setSelectedShineColor] = useState<string>("White");
   const [imageUri, setImageUri] = useState<string>(DEFAULT_IMAGE_URL);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -421,7 +422,9 @@ export default function CIFilterDemo(): React.JSX.Element {
                 {activeFilter.presets.map((preset: any) => {
                   const isActive = preset.blendMode
                     ? blendMode === preset.blendMode
-                    : selectedOutlineColor === preset.name;
+                    : activeFilter?.id === "shine"
+                      ? selectedShineColor === preset.name
+                      : selectedOutlineColor === preset.name;
 
                   return (
                     <TouchableOpacity
@@ -433,8 +436,18 @@ export default function CIFilterDemo(): React.JSX.Element {
                       onPress={() => {
                         if (preset.blendMode) {
                           setBlendMode(preset.blendMode);
+                        } else if (activeFilter?.id === "shine") {
+                          setSelectedShineColor(preset.name);
+                          setFilters((prev) => ({
+                            ...prev,
+                            shine: {
+                              ...prev.shine,
+                              colorRed: preset.colorRed ?? prev.shine.colorRed ?? 1,
+                              colorGreen: preset.colorGreen ?? prev.shine.colorGreen ?? 1,
+                              colorBlue: preset.colorBlue ?? prev.shine.colorBlue ?? 1,
+                            },
+                          }));
                         } else {
-                          // Handle outline color preset
                           setSelectedOutlineColor(preset.name);
                           setFilters((prev) => ({
                             ...prev,

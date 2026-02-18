@@ -78,6 +78,18 @@ export interface OutlineConfig {
   colorAlpha?: number;
 }
 
+export interface ShineConfig {
+  width?: number;
+  speed?: number;
+  spread?: number;
+  intensity?: number;
+  angle?: Radian;
+  colorRed?: number;
+  colorGreen?: number;
+  colorBlue?: number;
+  colorAlpha?: number;
+}
+
 export interface IReactPropIOS {
   url: string;
   borderRadius?: number;
@@ -93,4 +105,5 @@ export interface IReactPropIOS {
   maskedVariableBlur?: MaskedVariableBlurConfig;
   gradientOverlay?: GradientOverlayConfig;
   outline?: OutlineConfig;
+  shine?: ShineConfig;
 }

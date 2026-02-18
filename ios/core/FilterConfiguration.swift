@@ -18,6 +18,7 @@ struct FilterConfigurations {
     let maskedVariableBlur: MaskedVariableBlurConfig
     let gradientOverlay: GradientOverlayConfig
     let outline: OutlineConfig
+    let shine: ShineConfig
 
     init(from props: ExpoCIFilterProps) {
         self.motionBlur = MotionBlurConfig(dict: props.motionBlur)
@@ -32,5 +33,6 @@ struct FilterConfigurations {
         self.maskedVariableBlur = MaskedVariableBlurConfig(dict: props.maskedVariableBlur)
         self.gradientOverlay = GradientOverlayConfig(dict: props.gradientOverlay)
         self.outline = OutlineConfig(dict: props.outline)
+        self.shine = ShineConfig(dict: props.shine)
     }
 }

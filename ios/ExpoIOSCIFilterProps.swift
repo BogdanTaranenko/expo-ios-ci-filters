@@ -23,4 +23,5 @@ class ExpoCIFilterProps: ExpoSwiftUI.ViewProps {
      @Field var maskedVariableBlur: [String: Double] = [:]
      @Field var gradientOverlay: [String: Double] = [:]
      @Field var outline: [String: Double] = [:]
+     @Field var shine: [String: Double] = [:]
 }

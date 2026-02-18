@@ -179,6 +179,102 @@ func applyGradientOverlay(to image: CIImage, config: GradientOverlayConfig) -> C
         return blendFilter.outputImage ?? image
     }
 
+func applyShine(to image: CIImage, config: ShineConfig, progress: Double) -> CIImage {
+    guard config.width > 0 else { return image }
+
+    let extent = image.extent
+
+    // Step 1: Edge mask (same approach as outline)
+    guard let alphaMaskFilter = CIFilter(name: "CIColorMatrix") else { return image }
+    alphaMaskFilter.setValue(image, forKey: kCIInputImageKey)
+    alphaMaskFilter.setValue(CIVector(x: 0, y: 0, z: 0, w: 1), forKey: "inputRVector")
+    alphaMaskFilter.setValue(CIVector(x: 0, y: 0, z: 0, w: 1), forKey: "inputGVector")
+    alphaMaskFilter.setValue(CIVector(x: 0, y: 0, z: 0, w: 1), forKey: "inputBVector")
+    alphaMaskFilter.setValue(CIVector(x: 0, y: 0, z: 0, w: 1), forKey: "inputAVector")
+    guard let alphaImage = alphaMaskFilter.outputImage else { return image }
+
+    guard let edgeFilter = CIFilter(name: "CIMorphologyGradient") else { return image }
+    edgeFilter.setValue(alphaImage, forKey: kCIInputImageKey)
+    edgeFilter.setValue(config.width, forKey: "inputRadius")
+    guard let edgeMask = edgeFilter.outputImage else { return image }
+
+    // Step 2: Sweeping band gradient positioned by progress + angle
+    let diagonal = sqrt(extent.width * extent.width + extent.height * extent.height)
+    let cosA = CGFloat(cos(config.angle))
+    let sinA = CGFloat(sin(config.angle))
+
+    let centerX = extent.midX
+    let centerY = extent.midY
+
+    // Band position sweeps from -0.5*diagonal to +1.5*diagonal so it fully enters and exits
+    let totalSweep = diagonal * 2.0
+    let bandCenter = -diagonal * 0.5 + totalSweep * CGFloat(progress)
+    let halfSpread = diagonal * CGFloat(config.spread) * 0.5
+
+    // Points along the sweep direction
+    let p0x = centerX + cosA * (bandCenter - halfSpread) - sinA * 0
+    let p0y = centerY + sinA * (bandCenter - halfSpread) + cosA * 0
+    let p1x = centerX + cosA * (bandCenter + halfSpread) - sinA * 0
+    let p1y = centerY + sinA * (bandCenter + halfSpread) + cosA * 0
+
+    // Two gradients: ramp up (black→white) and ramp down (white→black)
+    let bandWhite = CIColor(red: 1, green: 1, blue: 1, alpha: 1)
+    let bandBlack = CIColor(red: 0, green: 0, blue: 0, alpha: 1)
+
+    let grad1 = CIFilter.smoothLinearGradient()
+    grad1.point0 = CGPoint(x: p0x, y: p0y)
+    grad1.point1 = CGPoint(x: centerX + cosA * bandCenter, y: centerY + sinA * bandCenter)
+    grad1.color0 = bandBlack
+    grad1.color1 = bandWhite
+    guard let gradImg1 = grad1.outputImage?.cropped(to: extent) else { return image }
+
+    let grad2 = CIFilter.smoothLinearGradient()
+    grad2.point0 = CGPoint(x: centerX + cosA * bandCenter, y: centerY + sinA * bandCenter)
+    grad2.point1 = CGPoint(x: p1x, y: p1y)
+    grad2.color0 = bandWhite
+    grad2.color1 = bandBlack
+    guard let gradImg2 = grad2.outputImage?.cropped(to: extent) else { return image }
+
+    // Multiply the two gradients to get a band shape (bright in center, dark at edges)
+    guard let multiplyFilter = CIFilter(name: "CIMultiplyBlendMode") else { return image }
+    multiplyFilter.setValue(gradImg1, forKey: kCIInputImageKey)
+    multiplyFilter.setValue(gradImg2, forKey: kCIInputBackgroundImageKey)
+    guard let bandImage = multiplyFilter.outputImage else { return image }
+
+    // Step 3: Multiply band with edge mask so shine only appears on edges
+    guard let maskBandFilter = CIFilter(name: "CIMultiplyBlendMode") else { return image }
+    maskBandFilter.setValue(bandImage, forKey: kCIInputImageKey)
+    maskBandFilter.setValue(edgeMask, forKey: kCIInputBackgroundImageKey)
+    guard let shineMask = maskBandFilter.outputImage else { return image }
+
+    // Step 4: Generate shine color and blend onto original
+    guard let colorFilter = CIFilter(name: "CIConstantColorGenerator") else { return image }
+    colorFilter.setValue(
+        CIColor(
+            red: config.colorRed,
+            green: config.colorGreen,
+            blue: config.colorBlue,
+            alpha: config.colorAlpha * config.intensity
+        ),
+        forKey: kCIInputColorKey
+    )
+    guard let colorImage = colorFilter.outputImage?.cropped(to: extent) else { return image }
+
+    guard let blendFilter = CIFilter(name: "CIBlendWithMask") else { return image }
+    blendFilter.setValue(colorImage, forKey: kCIInputImageKey)
+    blendFilter.setValue(image, forKey: kCIInputBackgroundImageKey)
+    blendFilter.setValue(shineMask, forKey: kCIInputMaskImageKey)
+    guard let blendedOutput = blendFilter.outputImage else { return image }
+
+    // Step 5: Clip result to original image's alpha so shine doesn't leak into transparent areas
+    guard let sourceInFilter = CIFilter(name: "CISourceInCompositing") else { return image }
+    sourceInFilter.setValue(blendedOutput, forKey: kCIInputImageKey)
+    sourceInFilter.setValue(image, forKey: kCIInputBackgroundImageKey)
+    guard let output = sourceInFilter.outputImage else { return image }
+
+    return output
+}
+
 func applyOutline(to image: CIImage, config: OutlineConfig) -> CIImage {
     guard config.width > 0 else { return image }
     
