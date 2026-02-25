@@ -278,8 +278,10 @@ func applyShine(to image: CIImage, config: ShineConfig, progress: Double) -> CII
 
 func applyOutline(to image: CIImage, config: OutlineConfig) -> CIImage {
     guard config.width > 0 else { return image }
-    
-    let context = CIContext(options: nil)
+
+    // Performance: Removed `let context = CIContext(options: nil)` that was allocated
+    // but never used. CIContext creation triggers GPU resource setup, which is expensive.
+    // The actual rendering already uses SharedCIContext.context.
     let expandedExtent = image.extent
 
     // Extract the alpha channel
