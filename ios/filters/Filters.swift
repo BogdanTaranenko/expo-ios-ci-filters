@@ -279,28 +279,24 @@ func applyShine(to image: CIImage, config: ShineConfig, progress: Double) -> CII
 func applyOutline(to image: CIImage, config: OutlineConfig) -> CIImage {
     guard config.width > 0 else { return image }
 
-    // Performance: Removed `let context = CIContext(options: nil)` that was allocated
-    // but never used. CIContext creation triggers GPU resource setup, which is expensive.
-    // The actual rendering already uses SharedCIContext.context.
-    let expandedExtent = image.extent
+    let extent = image.extent
 
-    // Extract the alpha channel
+    // Step 1: Extract alpha channel as a grayscale mask
     guard let alphaMaskFilter = CIFilter(name: "CIColorMatrix") else { return image }
     alphaMaskFilter.setValue(image, forKey: kCIInputImageKey)
     alphaMaskFilter.setValue(CIVector(x: 0, y: 0, z: 0, w: 1), forKey: "inputRVector")
     alphaMaskFilter.setValue(CIVector(x: 0, y: 0, z: 0, w: 1), forKey: "inputGVector")
     alphaMaskFilter.setValue(CIVector(x: 0, y: 0, z: 0, w: 1), forKey: "inputBVector")
     alphaMaskFilter.setValue(CIVector(x: 0, y: 0, z: 0, w: 1), forKey: "inputAVector")
-
     guard let alphaImage = alphaMaskFilter.outputImage else { return image }
 
-    // Create outline with morphology
-    guard let edgeFilter = CIFilter(name: "CIMorphologyGradient") else { return image }
-    edgeFilter.setValue(alphaImage, forKey: kCIInputImageKey)
-    edgeFilter.setValue(config.width, forKey: "inputRadius")
-    guard let edgeMaskImage = edgeFilter.outputImage else { return image }
+    // Step 2: Dilate the alpha mask outward to create the expanded silhouette
+    guard let dilateFilter = CIFilter(name: "CIMorphologyMaximum") else { return image }
+    dilateFilter.setValue(alphaImage, forKey: kCIInputImageKey)
+    dilateFilter.setValue(config.width, forKey: "inputRadius")
+    guard let dilatedMask = dilateFilter.outputImage else { return image }
 
-    // Generate colored outline
+    // Step 3: Generate solid outline color
     guard let colorFilter = CIFilter(name: "CIConstantColorGenerator") else { return image }
     colorFilter.setValue(
         CIColor(
@@ -311,14 +307,20 @@ func applyOutline(to image: CIImage, config: OutlineConfig) -> CIImage {
         ),
         forKey: kCIInputColorKey
     )
-    guard let colorImage = colorFilter.outputImage?.cropped(to: expandedExtent) else { return image }
+    guard let colorImage = colorFilter.outputImage?.cropped(to: extent) else { return image }
 
-    // Mask color with the outline
-    guard let blendFilter = CIFilter(name: "CIBlendWithMask") else { return image }
-    blendFilter.setValue(colorImage, forKey: kCIInputImageKey)
-    blendFilter.setValue(image, forKey: kCIInputBackgroundImageKey)
-    blendFilter.setValue(edgeMaskImage, forKey: kCIInputMaskImageKey)
-    guard let outputImage = blendFilter.outputImage else { return image }
-    
+    // Step 4: Mask the color with the dilated silhouette (solid colored expanded shape)
+    guard let maskedColorFilter = CIFilter(name: "CIBlendWithMask") else { return image }
+    maskedColorFilter.setValue(colorImage, forKey: kCIInputImageKey)
+    maskedColorFilter.setValue(CIImage.empty(), forKey: kCIInputBackgroundImageKey)
+    maskedColorFilter.setValue(dilatedMask, forKey: kCIInputMaskImageKey)
+    guard let coloredOutline = maskedColorFilter.outputImage else { return image }
+
+    // Step 5: Composite original image on top of the colored outline
+    guard let compositeFilter = CIFilter(name: "CISourceOverCompositing") else { return image }
+    compositeFilter.setValue(image, forKey: kCIInputImageKey)
+    compositeFilter.setValue(coloredOutline, forKey: kCIInputBackgroundImageKey)
+    guard let outputImage = compositeFilter.outputImage else { return image }
+
     return outputImage
 }
