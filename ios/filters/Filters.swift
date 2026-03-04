@@ -279,7 +279,11 @@ func applyShine(to image: CIImage, config: ShineConfig, progress: Double) -> CII
 func applyOutline(to image: CIImage, config: OutlineConfig) -> CIImage {
     guard config.width > 0 else { return image }
 
+    // Expand working area by outline width so the border isn't clipped
+    // when the object is close to the image edges.
+    let outlineWidth = CGFloat(config.width)
     let extent = image.extent
+    let expandedExtent = extent.insetBy(dx: -outlineWidth, dy: -outlineWidth)
 
     // Step 1: Extract alpha channel as a grayscale mask
     guard let alphaMaskFilter = CIFilter(name: "CIColorMatrix") else { return image }
@@ -296,7 +300,7 @@ func applyOutline(to image: CIImage, config: OutlineConfig) -> CIImage {
     dilateFilter.setValue(config.width, forKey: "inputRadius")
     guard let dilatedMask = dilateFilter.outputImage else { return image }
 
-    // Step 3: Generate solid outline color
+    // Step 3: Generate solid outline color over the expanded area
     guard let colorFilter = CIFilter(name: "CIConstantColorGenerator") else { return image }
     colorFilter.setValue(
         CIColor(
@@ -307,7 +311,7 @@ func applyOutline(to image: CIImage, config: OutlineConfig) -> CIImage {
         ),
         forKey: kCIInputColorKey
     )
-    guard let colorImage = colorFilter.outputImage?.cropped(to: extent) else { return image }
+    guard let colorImage = colorFilter.outputImage?.cropped(to: expandedExtent) else { return image }
 
     // Step 4: Mask the color with the dilated silhouette (solid colored expanded shape)
     guard let maskedColorFilter = CIFilter(name: "CIBlendWithMask") else { return image }

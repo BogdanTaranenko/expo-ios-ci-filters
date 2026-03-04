@@ -218,18 +218,22 @@ struct ExpoCIFilterView: ExpoSwiftUI.View, ExpoSwiftUI.WithHostingView {
             if !props.gradientOverlay.isEmpty {
                 currentImage = applyGradientOverlay(to: currentImage, config: configs.gradientOverlay)
             }
+            // Crop after base filters to prevent extent expansion from blur filters.
+            currentImage = currentImage.cropped(to: originalExtent)
+
+            // Apply outline AFTER cropping so the dilated border can extend beyond
+            // the original image bounds without being clipped.
             if !props.outline.isEmpty {
                 currentImage = applyOutline(to: currentImage, config: configs.outline)
             }
 
-            // Crop after base filters to prevent extent expansion from blur filters.
-            currentImage = currentImage.cropped(to: originalExtent)
+            let renderExtent = currentImage.extent
 
             // Performance: Rasterize the base CIImage into a bitmap-backed CIImage.
             // CIImage is lazy; without this, the entire filter graph would be re-evaluated
             // every frame when shine composites on top. Rasterizing here means the cached
             // result is a flat bitmap, making subsequent shine frames O(shine) not O(all).
-            if let cgBase = SharedCIContext.context.createCGImage(currentImage, from: originalExtent) {
+            if let cgBase = SharedCIContext.context.createCGImage(currentImage, from: renderExtent) {
                 baseCIImage = CIImage(cgImage: cgBase)
             } else {
                 baseCIImage = currentImage
@@ -254,10 +258,11 @@ struct ExpoCIFilterView: ExpoSwiftUI.View, ExpoSwiftUI.WithHostingView {
                 cache.shinePropsKey = props.shine
             }
             finalImage = applyShine(to: finalImage, config: shineConfig, progress: shineProgress)
-            finalImage = finalImage.cropped(to: originalExtent)
+            finalImage = finalImage.cropped(to: baseCIImage.extent)
         }
 
-        guard let cgImage = SharedCIContext.context.createCGImage(finalImage, from: originalExtent) else {
+        let finalExtent = finalImage.extent
+        guard let cgImage = SharedCIContext.context.createCGImage(finalImage, from: finalExtent) else {
             return nil
         }
 
